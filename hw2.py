@@ -215,6 +215,3 @@ def main():
     print(f"[Verify] max ||A_bar||^2 - sum_1^r(lambda)   = {approx_abs_err:.6e}, rel = {approx_rel_err:.6e}")
     print(f"Total energy ||A||_F^2 = {energy_A:.6f}  vs  sum(lambda_i) = {np.sum(lambdas_full):.6f}")
 
-# ---------- 程式入口 ----------
-if __name__ == "__main__":
-    main()
