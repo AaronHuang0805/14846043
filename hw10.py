@@ -1,77 +1,63 @@
 
-pip install matplotlib numpy
+float angle = 0;          
+float aVelocity = 0.05;   
+float amplitude = 120;    
 
+float originX = 400;      
+float originY = 200;      
+float boxSize = 60;       
+float wallX = 100;        
 
+void setup() {
+  size(800, 400);         
+  rectMode(CENTER);       
+  strokeCap(ROUND);       
+}
 
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
-from matplotlib.patches import Rectangle
-from IPython.display import HTML
+void draw() {
+  background(220);
+  
+  float x = originX + sin(angle) * amplitude;
+  
+  angle += aVelocity;
+  
+  stroke(255);           
+  strokeWeight(4);        
+  line(wallX, originY - 60, wallX, originY + 60);   
+  
+  float springStartX = wallX; 
+  
+  float springEndX = x - boxSize/2;
+  
+  noFill();
+  stroke(255);            
+  strokeWeight(3);        
+  
+  int segments = 24;     
+  float springLength = springEndX - springStartX;
+  float segmentLen = springLength / segments;
+  
+  beginShape();
 
-# ---------- parameters ----------
-A = 0.35                 # amplitude (axis units)
-f = 0.30                 # frequency (Hz)
-omega = 2*np.pi*f
-T_end = 10               # seconds
-fps = 30
-frames = T_end * fps
+  vertex(springStartX, originY);
+  
+  for (int i = 1; i < segments; i++) {
+    float px = springStartX + i * segmentLen;
+    float py = originY;
+    
+    if (i % 2 == 0) {
+      py -= 15; 
+    } else {
+      py += 15; 
+    }
+    
+    vertex(px, py);
+  }
+  
+  vertex(springEndX, originY);
+  endShape();
 
-t = np.linspace(0, T_end, frames)
-x = A * np.cos(omega * t)  # SHM displacement
-
-# scene layout (axis coordinates)
-wall_x = -1.2
-eq_x = -0.2               # equilibrium position of mass center
-y0 = 0.0
-
-# ---------- figure ----------
-fig, ax = plt.subplots(figsize=(9, 3.5))
-ax.set_xlim(-1.5, 1.5)
-ax.set_ylim(-0.6, 0.6)
-ax.axis("off")
-
-# gray background like teacher's video
-fig.patch.set_facecolor((0.75, 0.75, 0.75))
-ax.set_facecolor((0.75, 0.75, 0.75))
-
-# wall
-ax.plot([wall_x, wall_x], [-0.35, 0.35], color="white", linewidth=4)
-
-# mass (blue block)
-mass_w, mass_h = 0.18, 0.18
-mass = Rectangle((0, 0), mass_w, mass_h, color="blue")
-ax.add_patch(mass)
-
-# spring line (polyline)
-spring_line, = ax.plot([], [], color="white", linewidth=2)
-
-def spring_points(x1, x2, y, coils=22, amp=0.08):
-    xs = np.linspace(x1, x2, coils+1)
-    ys = np.full_like(xs, y)
-    for i in range(1, coils):
-        ys[i] = y + (amp if i % 2 else -amp)
-    ys[0] = y
-    ys[-1] = y
-    return xs, ys
-
-def init():
-    spring_line.set_data([], [])
-    return spring_line, mass
-
-def update(i):
-    # mass center position
-    mx = eq_x + x[i]
-
-    # update mass rectangle (Rectangle uses bottom-left corner)
-    mass.set_xy((mx - mass_w/2, y0 - mass_h/2))
-
-    # spring from wall to left face of mass
-    left_face = mx - mass_w/2
-    xs, ys = spring_points(wall_x, left_face, y0, coils=22, amp=0.08)
-    spring_line.set_data(xs, ys)
-
-    return spring_line, mass
-
-ani = FuncAnimation(fig, update, frames=frames, init_func=init, interval=1000/fps, blit=True)
-HTML(ani.to_jshtml())
+  noStroke();
+  fill(0, 0, 255);        
+  rect(x, originY, boxSize, boxSize);
+}
