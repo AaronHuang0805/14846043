@@ -1,101 +1,118 @@
-14846043 黃韋傑
-
-# If this script is not run under spyder IDE, comment the following two lines.
-#from IPython import get_ipython
-#get_ipython().run_line_magic('reset', '-sf')
-
 import numpy as np
-import numpy.linalg as la
 import matplotlib.pyplot as plt
 import pandas as pd
+import os
 
-def scatter_pts_2d(x, y):
-    # set plotting limits
-    xmax = np.max(x)
-    xmin = np.min(x)
-    xgap = (xmax - xmin) * 0.2
-    xmin -= xgap
-    xmax += xgap
+def model_predict(x, w):
+   
+    return w[0] + w[1] * np.sin(w[2] * x + w[3])
 
-    ymax = np.max(y)
-    ymin = np.min(y)
-    ygap = (ymax - ymin) * 0.2
-    ymin -= ygap
-    ymax += ygap 
+def compute_cost(x, y, w):
+    y_pred = model_predict(x, w)
+    error = y - y_pred
+    return np.sum(error ** 2)
 
-    return xmin,xmax,ymin,ymax
-
-dataset = pd.read_csv(r'C:\Users\ASUS\Downloads\OneDrive_1_2025-10-31\hw7.csv').to_numpy(dtype = np.float64)
-x = dataset[:, 0]
-y = dataset[:, 1]
-
-# parameters for our two runs of gradient descent
-w = np.array([-0.1607108,  2.0808538,  0.3277537, -1.5511576])
-
-alpha = 0.05
-max_iters = 500
-def cost(w, x, y):
-    y_hat = w[0] + w[1] * np.sin(w[2] * x + w[3])
-    e = y - y_hat
-    return np.sum(e**2)
-
-#     J(w0, w1, w2, w3) = sum(y[i] - w0 - w1 * sin(w2 * x[i] + w3))^2
-for _ in range(1, max_iters):
-       # 預測與殘差
-    s = np.sin(w[2] * x + w[3])      # sin(w2 x + w3)
-    c = np.cos(w[2] * x + w[3])      # cos(w2 x + w3)
-    y_hat = w[0] + w[1] * s
-    e = y - y_hat                    # e_i
-
-    # 解析法梯度（偏導）
-    # dJ/dw0 = -2 Σ e_i
-    g0 = -2.0 * np.sum(e)
-    # dJ/dw1 = -2 Σ e_i * sin(...)
-    g1 = -2.0 * np.sum(e * s)
-    # dJ/dw2 = -2 Σ e_i * w1 * x_i * cos(...)
-    g2 = -2.0 * np.sum(e * w[1] * x * c)
-    # dJ/dw3 = -2 Σ e_i * w1 * cos(...)
-    g3 = -2.0 * np.sum(e * w[1] * c)
-
-    grad = np.array([g0, g1, g2, g3])
-
-    # 更新規則
-    w = w - alpha * grad
-
-
-
-xmin,xmax,ymin,ymax = scatter_pts_2d(x, y)
-xt = np.linspace(xmin, xmax, 100)
-yt1 = w[0] + w[1] * np.sin(w[2] * xt + w[3])
-
-w = np.array([-0.1607108,  2.0808538,  0.3277537, -1.5511576])
-eps = 1e-8
-for _ in range(1, max_iters):
-    J0 = cost(w, x, y)
-    grad = np.zeros_like(w)
-
-    # 對每一個參數用數值微分
-    for k in range(len(w)):
-        w_eps = w.copy()
-        w_eps[k] += eps
-        J_eps = cost(w_eps, x, y)
-        grad[k] = (J_eps - J0) / eps
-
-    # 更新
-    w = w - alpha * grad
+def gradient_analytic(x, y, w):
     
+    u = w[2] * x + w[3]
+    y_pred = w[0] + w[1] * np.sin(u)
+    error = y - y_pred # error corresponds to e_i
+    
+    grad = np.zeros_like(w)
+    
+    grad[0] = -2.0 * np.sum(error * 1.0)
+  
+    grad[1] = -2.0 * np.sum(error * np.sin(u))
+ 
+    grad[2] = -2.0 * np.sum(error * w[1] * x * np.cos(u))
 
-xt = np.linspace(xmin, xmax, 100)
-yt2 = w[0] + w[1] * np.sin(w[2] * xt + w[3])
+    grad[3] = -2.0 * np.sum(error * w[1] * np.cos(u))
+    
+    return grad
 
-# plot x vs y; xt vs yt1; xt vs yt2 
-fig = plt.figure(dpi=288)
-plt.scatter(x, y, color='k', edgecolor='w', linewidth=0.9, s=60, zorder=3)
-plt.plot(xt, yt1, linewidth=4, c='b', zorder=0, label='Analytic method')
-plt.plot(xt, yt2, linewidth=2, c='r', zorder=0, label='Numeric method')
-plt.xlim([xmin,xmax])
-plt.ylim([ymin,ymax])
-plt.xlabel('$x$')
-plt.ylabel('$y$')
-plt.legend()
-plt.show()
+def gradient_numeric(x, y, w):
+    
+    epsilon = 1e-8
+    grad = np.zeros_like(w)
+    current_cost = compute_cost(x, y, w)
+    
+    for k in range(len(w)):
+        w_perturbed = w.copy()
+        w_perturbed[k] += epsilon
+        cost_perturbed = compute_cost(x, y, w_perturbed)
+        
+        grad[k] = (cost_perturbed - current_cost) / epsilon
+        
+    return grad
+
+def train_model(x, y, w_init, grad_func, alpha=0.05, max_iters=500):
+   
+    w = w_init.copy()
+    cost_history = []
+
+    for i in range(max_iters):
+      
+        grad = grad_func(x, y, w)
+     
+        w = w - alpha * grad
+        
+        if i % 100 == 0:
+            cost = compute_cost(x, y, w)
+            cost_history.append(cost)
+            
+    return w
+
+
+def get_data(filename='data/hw7.csv'):
+  
+    if os.path.exists(filename):
+        df = pd.read_csv(filename)
+        data = df.to_numpy(dtype=np.float64)
+        return data[:, 0], data[:, 1]
+    else:
+        print("Warning: CSV not found. Generating dummy data compatible with the problem.")
+   
+        np.random.seed(42)
+        x_dummy = np.linspace(0, 1, 15)
+  
+        y_dummy = np.sin(2 * np.pi * x_dummy) + np.random.normal(0, 0.1, 15)
+        return x_dummy, y_dummy
+
+if __name__ == "__main__":
+   
+    x, y = get_data()
+    
+    w_init = np.array([-0.1607108, 2.0808538, 0.3277537, -1.5511576])
+    
+    ALPHA = 0.05
+    MAX_ITERS = 500
+
+    print("--- Starting Gradient Descent ---")
+    print("1. Training with Analytic Gradient...")
+    w_analytic = train_model(x, y, w_init, gradient_analytic, ALPHA, MAX_ITERS)
+    print(f"   Final w: {w_analytic}")
+
+    print("2. Training with Numeric Gradient...")
+    w_numeric = train_model(x, y, w_init, gradient_numeric, ALPHA, MAX_ITERS)
+    print(f"   Final w: {w_numeric}")
+
+    plt.figure(figsize=(10, 6))
+    
+    plt.scatter(x, y, color='black', label='Data points')
+   
+    x_smooth = np.linspace(min(x), max(x), 200)
+   
+    plt.plot(x_smooth, model_predict(x_smooth, w_analytic), 
+             'b-', linewidth=3, label='Analytic method')
+   
+    plt.plot(x_smooth, model_predict(x_smooth, w_numeric), 
+             'r--', linewidth=2, label='Numeric method')
+    
+    plt.xlabel('x')
+    plt.ylabel('y')
+    plt.title('Non-linear Regression: Analytic vs Numeric Gradient')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    
+    plt.savefig('hw7_result.png')
+    plt.show()
