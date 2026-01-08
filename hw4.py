@@ -1,112 +1,52 @@
-14846043 黃韋傑
-
 import numpy as np
-import numpy.linalg as la
 
-def scale_to_range(X: np.ndarray, to_range=(0,1), byrow = False):
-    """
-    Parameters
-    ----------
-    X: 
-        1D or 2D array
-    
-    to_range: default to (0,1).
-        Desired range of transformed data.
-        
-    byrow: default to False
-        When working with a 2D array, true to perform row mapping; 
-        otherwise, column mapping. Ignore if X is 1D. 
-    
-    ----------
-    
-    """
-    a, b = to_range
-    X = np.asarray(X, dtype=float)
-    Y = np.zeros_like(X, dtype=float)
-
-    # ---------- 1D 情況 ----------
+def scale_to_range(X: np.ndarray, to_range=(0, 1), byrow=False):
+       
     if X.ndim == 1:
-        x_min, x_max = np.min(X), np.max(X)
-        if x_max == x_min:
-            Y[:] = a  # 若全部值相同
-        else:
-            Y = a + (X - x_min) / (x_max - x_min) * (b - a)
-        return np.round(Y, 2)
-    # ---------- 2D 情況 ----------
-    if byrow:
-        # 每一列 (row-wise)
-        for i in range(X.shape[0]):
-            x_min, x_max = np.min(X[i, :]), np.max(X[i, :])
-            if x_max == x_min:
-                Y[i, :] = a
-            else:
-                Y[i, :] = a + (X[i, :] - x_min) / (x_max - x_min) * (b - a)
+        axis = 0
     else:
-        # 每一行 (column-wise)
-        for j in range(X.shape[1]):
-            x_min, x_max = np.min(X[:, j]), np.max(X[:, j])
-            if x_max == x_min:
-                Y[:, j] = a
-            else:
-                Y[:, j] = a + (X[:, j] - x_min) / (x_max - x_min) * (b - a)
-    return np.round(Y, 2)
+        axis = 1 if byrow else 0
 
-print('test case 1:')
-A = np.array([1, 2.5, 6, 4, 5])
-print(f'A => \n{A}')
-print(f'scale_to_range(A) => \n{scale_to_range(A)}\n\n')
+   
+    X_min = X.min(axis=axis, keepdims=True)
+    X_max = X.max(axis=axis, keepdims=True)
+    
+    a, b = to_range
+    
+    denom = X_max - X_min
+    
+    denom[denom == 0] = 1.0 
+    
+    Y = a + ((X - X_min) / denom) * (b - a)
+    
+    return Y
 
-print('test case 2:')
-A = np.array([[1,12,3,7,8],
-              [5,14,1,5,5],
-              [4,11,4,1,2],
-              [3,13,2,3,5],
-              [2,15,6,3,2]])
-print(f'A => \n{A}')
-print(f'scale_to_range(A) => \n{scale_to_range(A)}\n\n')
+if __name__ == "__main__":
+    np.set_printoptions(precision=2, suppress=True)
 
-print('test case 3:')
-A = np.array([[1,2,3,4,5],
-              [5,4,1,2,3],
-              [3,5,4,1,2]])
-print(f'A => \n{A}')
-print(f'scale_to_range(A, byrow=True) => \n{scale_to_range(A, byrow=True)}\n\n')
+    print("--- Test Case 1: 1D Array ---")
+    data_1d = np.array([3, 5, 1, 4])
+    result_1d = scale_to_range(data_1d, to_range=(5, 7))
+    print(f"Input:  {data_1d}")
+    print(f"Output: {result_1d}") 
+    # Expected: [6.  7.  5.  6.5]
 
+    print("\n--- Test Case 2: 2D Array ---")
+    data_2d = np.array([
+        [1, 4, 3, 6],
+        [6, 7, 9, 5],
+        [11, 14, 13, 16]
+    ])
+    print("Input Matrix:")
+    print(data_2d)
 
-"""
-Expected output:
-------------------
-test case 1:
-A => 
-[1.  2.5 6.  4.  5. ]
-scale_to_range(A) => 
-[0.  0.3 1.  0.6 0.8]
-
-
-test case 2:
-A => 
-[[ 1 12  3  7  8]
- [ 5 14  1  5  5]
- [ 4 11  4  1  2]
- [ 3 13  2  3  5]
- [ 2 15  6  3  2]]
-scale_to_range(A) => 
-[[0.   0.25 0.4  1.   1.  ]
- [1.   0.75 0.   0.67 0.5 ]
- [0.75 0.   0.6  0.   0.  ]
- [0.5  0.5  0.2  0.33 0.5 ]
- [0.25 1.   1.   0.33 0.  ]]
-
-
-test case 3:
-A => 
-[[1 2 3 4 5]
- [5 4 1 2 3]
- [3 5 4 1 2]]
-scale_to_range(A, byrow=True) => 
-[[0.   0.25 0.5  0.75 1.  ]
- [1.   0.75 0.   0.25 0.5 ]
- [0.5  1.   0.75 0.   0.25]]   
-S 
-"""    
-
+    print("\n(A) Row-wise mapping to [0, 1]:")
+    result_row = scale_to_range(data_2d, to_range=(0, 1), byrow=True)
+    print(result_row)
+    # Row 1 (1~6 -> 0~1): [0. 0.6 0.4 1.]
+    # Row 2 (5~9 -> 0~1): [0.25 0.5 1. 0.]
+    
+    print("\n(B) Column-wise mapping to [0, 1]:")
+    result_col = scale_to_range(data_2d, to_range=(0, 1), byrow=False)
+    print(result_col)
+    # Col 1 (1~11 -> 0~1): [0. 0.5 1.]
