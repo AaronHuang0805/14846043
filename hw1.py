@@ -1,67 +1,57 @@
-
-# 14846043 黃韋傑
-
 import numpy as np
-import numpy.linalg as la
 
 def gram_schmidt(S1: np.ndarray):
-    """
-    Parameters
-    ----------
-    S1 : np.ndarray
-        A m x n matrix with columns that need to be orthogonalized using Gram-Schmidt process.
-        It is assumed that vectors in S = [v1 v2 ... vn] are linear independent.
-
-    Returns
-    -------
-    S2 : np.ndarray
-        S2 = [e1 e2 ... en] is a m x n orthogonal matrix such that span(S1) = span(S2)
-
-    """
+        
     m, n = S1.shape
-    S2 = np.zeros((m, n))
-    for j in range(n):
-        # 取第 j 個向量
-        u = S1[:, j].copy()
-
-        # 投影到前面所有 e_i 上，減掉投影部分
-        for i in range(j):
-            proj = np.dot(S1[:, j], S2[:, i]) * S2[:, i]
-            u -= proj
-
-        # 正規化
-        norm_u = la.norm(u)
-        if norm_u == 0:
-            raise ValueError(f"Vector {j} is linearly dependent.")
-        S2[:, j] = u / norm_u
-
+    S2 = np.zeros(S1.shape)
+    
+    for r in range(n):
+       
+        v = S1[:, r]
+        
+        u = v.copy()
+        
+        for i in range(r):
+            e_prev = S2[:, i] # 取出之前的基底 e_i
+           
+            coefficient = np.dot(v, e_prev)
+            
+            u = u - coefficient * e_prev
+        
+        norm_u = np.linalg.norm(u)
+       
+        if norm_u > 1e-10:
+            e = u / norm_u
+        else:
+            e = u 
+  
+        S2[:, r] = e
 
     return S2
 
-S1 = np.array([[ 7,  4,  7, -3, -9],
-               [-1, -4, -4,  1, -4],
-               [ 8,  0,  5, -6,  0],
-               [-4,  1,  1, -1,  4],
-               [ 2,  3, -5,  1,  8]], dtype=np.float64)
-S2 = gram_schmidt(S1)
-
-np.set_printoptions(precision=2, suppress=True)
-print(f'S1 => \n{S1}')
-print(f'S2.T @ S2 => \n{S2.T @ S2}')
-
-"""
-Expected output:
-------------------
-S1 => 
-[[ 7.  4.  7. -3. -9.]
- [-1. -4. -4.  1. -4.]
- [ 8.  0.  5. -6.  0.]
- [-4.  1.  1. -1.  4.]
- [ 2.  3. -5.  1.  8.]]
-S2.T @ S2 => 
-[[ 1. -0. -0.  0.  0.]
- [-0.  1. -0. -0. -0.]
- [-0. -0.  1.  0.  0.]
- [ 0. -0.  0.  1.  0.]
- [ 0. -0.  0.  0.  1.]]
-"""  
+# --- 以下為 5x5 矩陣測試 ---
+if __name__ == "__main__":
+    
+    np.random.seed(42)
+    
+    print("--- 5x5 矩陣 Gram-Schmidt 測試 ---")
+   
+    test_S1 = np.random.rand(5, 5)
+    
+    print("\n原始矩陣 S1 (5x5):")
+    print(test_S1)
+    
+    result_S2 = gram_schmidt(test_S1)
+    
+    print("\n正交化結果 S2 (5x5):")
+    
+    np.set_printoptions(precision=4, suppress=True)
+    print(result_S2)
+    
+    identity_check = result_S2.T @ result_S2
+    
+    print("\n驗證正交性 (S2.T @ S2 應為單位矩陣):")
+    print(identity_check)
+    
+    is_orthogonal = np.allclose(identity_check, np.eye(5))
+    print(f"\n驗證結果: {'成功' if is_orthogonal else '失敗'}")
